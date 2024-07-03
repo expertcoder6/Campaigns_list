@@ -160,7 +160,7 @@ GET /users/filter?filter=cam1,cam2
 
 ## Submission
 
-Provide the code repository (e.g., GitHub) link containing:
+Provide the code repository link contains following thing:
 - The Ruby on Rails application code.
 - Instructions for setting up and running the application locally.
 - Details for accessing the deployed application on EC2.
