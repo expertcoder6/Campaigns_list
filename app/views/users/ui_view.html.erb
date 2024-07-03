@@ -1,0 +1,169 @@
+  <div class="container mt-5">
+    <h1 class="mb-4">All Users</h1>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Campaigns</th>
+        </tr>
+      </thead>
+      <tbody id="users_table_body">
+        <!-- Users will be loaded here via AJAX -->
+      </tbody>
+    </table>
+
+    <h2 class="mt-5">Add New User</h2>
+    <form id="new_user_form" class="mb-4">
+      <div class="form-group">
+        <label for="user_name">Name</label>
+        <input type="text" id="user_name" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="user_email">Email</label>
+        <input type="email" id="user_email" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="campaigns">Campaigns</label>
+        <div id="campaigns_list_container" class="mb-3">
+          <div class="form-row align-items-center campaign_item mb-2">
+            <div class="col">
+              <input type="text" name="campaign_name" placeholder="Campaign Name" class="form-control">
+            </div>
+            <div class="col">
+              <input type="text" name="campaign_id" placeholder="Campaign ID" class="form-control">
+            </div>
+            <div class="col-auto">
+              <button type="button" class="btn btn-danger" onclick="removeCampaign(this)">Remove</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="add_campaign_button" class="btn btn-secondary">Add Campaign</button>
+      </div>
+      <input type="hidden" id="campaigns_list">
+      <button type="submit" class="btn btn-primary">Add User</button>
+    </form>
+
+    <h2 class="mt-5">Filter Users by Campaign Names</h2>
+    <form id="filter_users_form" class="mb-4">
+      <div class="form-group">
+        <label for="campaign_names">Campaign Names</label>
+        <input type="text" id="campaign_names" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-primary">Filter Users</button>
+    </form>
+  </div>
+<script>
+  $(document).ready(function() {
+    // Function to read the CSRF token from the meta tag
+    function getCsrfToken() {
+      return $('meta[name="csrf-token"]').attr('content');
+    }
+
+    // Function to load users
+    function loadUsers(filter = '') {
+      $.ajax({
+        url: '/users',
+        method: 'GET',
+        data: { filter: filter },
+        success: function(data) {
+          let usersTableBody = $('#users_table_body');
+          usersTableBody.empty();
+          data.users.forEach(user => {
+            usersTableBody.append(`
+              <tr>
+                <td>${user.id}</td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${JSON.stringify(user.campaigns_list)}</td>
+              </tr>
+            `);
+          });
+        }
+      });
+    }
+
+    // Load all users initially
+    loadUsers();
+
+    // Add campaign button click handler
+    $('#add_campaign_button').click(function() {
+      var newCampaign = `
+        <div class="form-row align-items-center campaign_item mb-2">
+          <div class="col">
+            <input type="text" name="campaign_name" placeholder="Campaign Name" class="form-control">
+          </div>
+          <div class="col">
+            <input type="text" name="campaign_id" placeholder="Campaign ID" class="form-control">
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-danger" onclick="removeCampaign(this)">Remove</button>
+          </div>
+        </div>`;
+      $('#campaigns_list_container').append(newCampaign);
+    });
+
+    // Remove campaign button click handler
+    removeCampaign = function(button) {
+      $(button).closest('.campaign_item').remove();
+    };
+
+    // New user form submit handler
+    $('#new_user_form').submit(function(event) {
+      event.preventDefault();
+      var campaignsList = [];
+      $('.campaign_item').each(function() {
+        var campaignName = $(this).find('input[name="campaign_name"]').val();
+        var campaignId = $(this).find('input[name="campaign_id"]').val();
+        if (campaignName && campaignId) {
+          campaignsList.push({ campaign_name: campaignName, campaign_id: campaignId });
+        }
+      });
+      var userData = {
+        name: $('#user_name').val(),
+        email: $('#user_email').val(),
+        campaigns_list: JSON.stringify(campaignsList) // Stringify campaignsList
+      };
+      $.ajax({
+        url: '/users',
+        method: 'POST',
+        data: JSON.stringify(userData),
+        contentType: 'application/json',
+        headers: {
+          'X-CSRF-Token': getCsrfToken()
+        },
+        success: function(response) {
+          loadUsers();
+          $('#new_user_form')[0].reset();
+          $('#campaigns_list_container').empty();
+        }
+      });
+    });
+
+    // Filter users form submit handler
+    $('#filter_users_form').submit(function(event) {
+      event.preventDefault();
+      var filter = $('#campaign_names').val();
+      $.ajax({
+        url: '/users/filter', // Change the URL to your filter endpoint
+        method: 'GET',
+        data: { filter: filter },
+        success: function(data) {
+          let usersTableBody = $('#users_table_body');
+          usersTableBody.empty();
+          data.users.forEach(user => {
+            usersTableBody.append(`
+              <tr>
+                <td>${user.id}</td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${JSON.stringify(user.campaigns_list)}</td>
+              </tr>
+            `);
+          });
+        }
+      });
+    });
+  });
+</script>
